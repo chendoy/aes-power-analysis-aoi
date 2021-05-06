@@ -3,7 +3,10 @@ import numpy as np
 import requests
 import json
 import ast
+import warnings
 import sys
+
+warnings.filterwarnings('ignore') # To suppress numpy's RuntimeWarning
 
 # Our GitHub repo:
 # https://github.com/chendoy/aes-power-analysis-aoi
@@ -35,6 +38,7 @@ def main(filename):
 	for i in range(len(means)):
 		print(f'{means[i]:.2f}\t{vars[i]:.2f}')
 
+
 def download_power_traces (filename, server_url, number_of_power_traces):
 	"""
 	Downloads number_of_power_traces power traces from the server server_url
@@ -42,7 +46,7 @@ def download_power_traces (filename, server_url, number_of_power_traces):
 	which each row represents a downloaded power trace
 		Parameters:
 			filename (string) -- the file to save the traces to.
-			server_url (string) -- the url of the server to download the traces from.
+			server_url (string) -- the URL of the server to download the traces from.
 			number_of_power_traces (int) -- number of power traces to download.
 		Returns:
 			This function does not return anything.
@@ -50,10 +54,11 @@ def download_power_traces (filename, server_url, number_of_power_traces):
 	with open(f'{filename}.txt', 'w') as f:
 		for i in range(number_of_power_traces):
 			response = send_request(f'{server_url}/encrypt', params={'user': USERNAME, 'difficulty': DIFFICULTY})
-			response = json.loads(response)
+			response = json.loads(response) # Parse JSON string
 			trace = response['leaks']
 			f.write(f'{str(trace)}\n')
 		f.close()
+
 
 def get_means_variances(filename):
 	"""
@@ -70,10 +75,11 @@ def get_means_variances(filename):
 		traces = [x.strip() for x in content] # Split to lines
 		traces = [ast.literal_eval(x) for x in traces] # Convert to python list
 		traces = [np.array(x) for x in traces] # Convert to numpy arrays
-		traces = [a[a != np.array(None)] for a in traces] # Remove Nones
-		means = [trace.mean() for trace in traces]
-		vars = [trace.var() for trace in traces]
+		traces = np.array(traces, dtype=np.float)
+		means = np.nanmean(traces, axis=0)
+		vars = np.nanvar(traces, axis=0)
 		return means, vars
+
 
 def send_request(server_url, params, limit=RETRY_LIMIT):
 	"""
@@ -101,18 +107,16 @@ def send_request(server_url, params, limit=RETRY_LIMIT):
 	response = res.text
 	return response
 
+
 def eprint(*args, **kwargs):
 	"""
-	Prints to stderr, for more informative messages.
+	Prints to stderr, for more debugging purposes.
 	"""
 	print(*args, file=sys.stderr, **kwargs)
-
-# ========================================================================================
 
 
 if __name__ == '__main__':
 	if len(sys.argv) != 2:
 		eprint('Usage: python3 ex02_M1.py <file_name>')
 		exit(1)
-
 	main(sys.argv[1])
