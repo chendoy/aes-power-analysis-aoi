@@ -36,6 +36,17 @@ def main(filename):
 		print(f'{means[i]:.2f}\t{vars[i]:.2f}')
 
 def download_power_traces (filename, server_url, number_of_power_traces):
+	"""
+	Downloads number_of_power_traces power traces from the server server_url
+	and saves the results to the file filename in a usable format (.txt), in
+	which each row represents a downloaded power trace
+		Parameters:
+			filename (string) -- the file to save the traces to.
+			server_url (string) -- the url of the server to download the traces from.
+			number_of_power_traces (int) -- number of power traces to download.
+		Returns:
+			This function does not return anything.
+	"""
 	with open(f'{filename}.txt', 'w') as f:
 		for i in range(number_of_power_traces):
 			response = send_request(f'{server_url}/encrypt', params={'user': USERNAME, 'difficulty': DIFFICULTY})
@@ -45,13 +56,24 @@ def download_power_traces (filename, server_url, number_of_power_traces):
 		f.close()
 
 def get_means_variances(filename):
+	"""
+	Reads the file filename, containing the saved power traces, 
+	and calculates the mean and variance of each position in the trace.
+		Parameters:
+			filename (string) -- the file to read the saved traces from.
+		Returns:
+			means (numpy array) -- the calculated means of each trace from the file.
+			vars (numpy array) -- the calculated variances of each trace from the file.
+	"""
 	with open(f'{filename}.txt', 'r') as f:
 		content = f.readlines()
-		traces = [np.array(ast.literal_eval(x.strip())) for x in content] 
+		traces = [x.strip() for x in content] # Split to lines
+		traces = [ast.literal_eval(x) for x in traces] # Convert to python list
+		traces = [np.array(x) for x in traces] # Convert to numpy arrays
 		traces = [a[a != np.array(None)] for a in traces] # Remove Nones
 		means = [trace.mean() for trace in traces]
-		variances = [trace.var() for trace in traces]
-		return means, variances
+		vars = [trace.var() for trace in traces]
+		return means, vars
 
 def send_request(server_url, params, limit=RETRY_LIMIT):
 	"""
