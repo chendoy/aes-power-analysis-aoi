@@ -38,12 +38,17 @@ NUM_BYTES_POSSI = 256															# |
 
 def main(filename):
 	eprint('Downloading traces...')
-	download_power_traces(filename, SERVER_URL, NUM_POWER_TRACES)
+	# download_power_traces(filename, SERVER_URL, NUM_POWER_TRACES)
 	plaintexts = read_plaintexts(filename) # (D,16)
 	traces = read_traces(filename) # (D,T)
 	eprint('Starting power analysis...')
 	start_time = time.time()
-	key = cpa_attack(plaintexts, traces)
+	possible_keys = []
+	for num_traces in [5000, 6000, 7000, 8000, 9000, 10000]:
+		guessed_bytes = cpa_attack(plaintexts, traces, num_traces=num_traces)
+		possible_keys.append(guessed_bytes)
+	key = majority_voting(possible_keys)
+	key = get_key_str(key)
 	end_time = time.time()
 	eprint('Verifying key...')
 	if verify_key(key):
@@ -94,7 +99,7 @@ def read_plaintexts(filename):
 		return plaintexts
 
 
-def cpa_attack(plaintexts, traces):
+def cpa_attack(plaintexts, traces, num_traces=None):
 	"""
 	Finds the byte of key one by one using CPA.
 		Parameters:
@@ -103,14 +108,17 @@ def cpa_attack(plaintexts, traces):
 		Returns:
 			key_str (string) -- the string representation of the guessed key.
 	"""
+	if num_traces is not None: # Work with subset of traces
+		plaintexts = plaintexts[:num_traces,:]
+		traces = traces[:num_traces,:]
+
 	guessed_bytes = []
 
 	for i in range(NUM_KEY_BYTES):
 		guessed_byte = guess_key_byte(plaintexts, traces, i)
 		guessed_bytes.append(guessed_byte)
 
-	key_str = get_key_str(guessed_bytes)
-	return key_str
+	return guessed_bytes
 
 
 def guess_key_byte(plaintexts, traces, byte_number):
@@ -123,11 +131,11 @@ def guess_key_byte(plaintexts, traces, byte_number):
 		Returns:
 			best_guess (byte) -- the best guess for the byte in index byte_number.
 	"""
-	power_consumptions = np.zeros((NUM_BYTES_POSSI,NUM_POWER_TRACES))
+	power_consumptions = np.zeros((NUM_BYTES_POSSI,traces.shape[0]))
 	for byte_guess in range(NUM_BYTES_POSSI):
 		power_consumptions[byte_guess] = measure_power_consumption(plaintexts, byte_guess, byte_number)
 	
-	corrs = np.zeros((NUM_BYTES_POSSI,NUM_POWER_TRACES))
+	corrs = np.zeros((NUM_BYTES_POSSI,traces.shape[0]))
 
 	for byte_guess in range(NUM_BYTES_POSSI):
 		current_vec = power_consumptions[byte_guess]
@@ -140,6 +148,11 @@ def guess_key_byte(plaintexts, traces, byte_number):
 	# print('best', hex(best_guess), 'second', hex(second_best))
 
 	return best_guess
+
+
+def majority_voting(possible_keys):
+	for possible_key in possible_keys:
+		print(possible_key)
 
 
 def measure_power_consumption(plaintexts, byte_guess, byte_number):
