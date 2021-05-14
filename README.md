@@ -2,7 +2,7 @@
 
 ## Correlation Power Analysis
 
-This code demonstrates power analysis attack on the server at http://aoi.ise.bgu.ac.il/ as part of the class "Attacks on Implementations of Secure Systems" by Dr. Yossi Oren @BGU, spring 2021.
+This code demonstrates power analysis attack on the server at http://aoi.ise.bgu.ac.il/ as part of the class "Attacks on Implementations of Secure Systems" by Dr. Yossi Oren @BGU, spring 2021. A simulated AES implementation is running on this server and the secret key needs to be revealed.
 
 ### Getting Traces
 
