@@ -14,9 +14,9 @@ The server responds with a JSON string with two fields: "plaintext" and "leaks".
 
 A guessed key can be verified using this address, which returns 1 if the key is correct:
 
-http://aoi.ise.bgu.ac.il/verify?user=chendoy&difficulty=1&key=2da963b3394ce9e9f2bba60f69281d83
+http://aoi.ise.bgu.ac.il/verify?user=chendoy&difficulty=2&key=d60aff3115a72dfc887aa468e2fd2f5c
 
 ### How to Run?
-```python3 ex02_M1.py [filename]```
+```python3 ex02_M2.py [filename]```
 
-For example: ```python3 ex02_M1.py traces```
+For example: ```python3 ex02_M2.py traces```
