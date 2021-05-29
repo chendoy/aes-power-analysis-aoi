@@ -4,11 +4,11 @@ import requests
 import json
 from sbox import AesSbox
 from scipy.stats import pearsonr
-import ast
 import time
 from tqdm import tqdm
 import warnings
 import sys
+
 
 warnings.filterwarnings('ignore') # To suppress numpy's RuntimeWarning
 
@@ -23,32 +23,29 @@ warnings.filterwarnings('ignore') # To suppress numpy's RuntimeWarning
 # ╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚══════╝    ╚══════╝
 
 # ==================================== configuration ==============================
-																				# |
-SERVER_URL = 'http://aoi.ise.bgu.ac.il'											# |
-NUM_POWER_TRACES = 10000														# |
-DIFFICULTY = '3'																# |
-USERNAME = '2056449411'															# |
-RETRY_LIMIT = 10																# |
-NUM_KEY_BYTES = 16																# |
-TIMEOUT = 20 # In seconds														# |
-NUM_BYTES_POSSI = 256															# |
-																				# |
+
+SERVER_URL = 'http://aoi.ise.bgu.ac.il'
+NUM_POWER_TRACES = 10000
+DIFFICULTY = '2'
+USERNAME = 'chendoy'
+RETRY_LIMIT = 10
+NUM_KEY_BYTES = 16
+TIMEOUT = 20 # In seconds
+NUM_BYTES_POSSI = 256
+USE_TQDM = True
+
 # =================================================================================
 
 
 def main(filename):
 	eprint('Downloading traces...')
-	# download_power_traces(filename, SERVER_URL, NUM_POWER_TRACES)
-	plaintexts = read_plaintexts(filename) # (D,16)
-	traces = read_traces(filename) # (D,T)
+	download_power_traces(filename, SERVER_URL, NUM_POWER_TRACES)
+	plaintexts = read_plaintexts(filename) # shape (D,16)
+	traces = read_traces(filename) # shape (D,T)
 	eprint('Starting power analysis...')
 	start_time = time.time()
-	possible_keys = []
-	for num_traces in [5000, 6000, 7000, 8000, 9000, 10000]:
-		guessed_bytes = cpa_attack(plaintexts, traces, num_traces=num_traces)
-		possible_keys.append(guessed_bytes)
-	key = majority_voting(possible_keys)
-	key = get_key_str(key)
+	guessed_bytes = cpa_attack(plaintexts, traces, num_traces=NUM_POWER_TRACES)
+	key = get_key_str(guessed_bytes)
 	end_time = time.time()
 	eprint('Verifying key...')
 	if verify_key(key):
@@ -142,17 +139,13 @@ def guess_key_byte(plaintexts, traces, byte_number):
 		for timestamp in range(traces.shape[1]):
 			corrs[byte_guess,timestamp] = pearsonr(current_vec, traces[:,timestamp])[0]
 
+	corrs = np.abs(corrs)
 	best_guess = np.argsort(np.max(corrs, axis=1))[-1]
-	second_best = np.argsort(np.max(corrs, axis=1))[-2]
+	# second_best = np.argsort(np.max(corrs, axis=1))[-2]
+	# third_best = np.argsort(np.max(corrs, axis=1))[-3]
 
-	# print('best', hex(best_guess), 'second', hex(second_best))
-
+	# print('np.min(corrs)', np.min(corrs))
 	return best_guess
-
-
-def majority_voting(possible_keys):
-	for possible_key in possible_keys:
-		print(possible_key)
 
 
 def measure_power_consumption(plaintexts, byte_guess, byte_number):
@@ -211,7 +204,7 @@ def download_power_traces (filename, server_url, number_of_power_traces):
 			This function does not return anything.
 	"""
 	with open(f'{filename}.txt', 'w') as f:
-		for i in tqdm(range(number_of_power_traces)):
+		for i in (tqdm(range(number_of_power_traces)) if USE_TQDM else range(number_of_power_traces)):
 			response = send_request(f'{server_url}/encrypt', params={'user': USERNAME, 'difficulty': DIFFICULTY})
 			f.write(f'{str(response)}\n')
 		f.close()
